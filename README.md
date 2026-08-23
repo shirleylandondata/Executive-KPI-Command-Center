@@ -1,4 +1,4 @@
-<img width="3380" height="1679" alt="architecture_flow" src="https://github.com/user-attachments/assets/7fcaa13b-5342-48f5-b123-ee0d362ed5c0" />
+
 # 📊 Executive KPI Command Center
 
 **An end-to-end analytics engineering build that turns fragmented B2B SaaS data into a governed, executive-ready KPI system.**
