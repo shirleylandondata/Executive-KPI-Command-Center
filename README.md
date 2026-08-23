@@ -1,3 +1,4 @@
+<img width="3380" height="1679" alt="architecture_flow" src="https://github.com/user-attachments/assets/7fcaa13b-5342-48f5-b123-ee0d362ed5c0" />
 # 📊 Executive KPI Command Center
 
 **An end-to-end analytics engineering build that turns fragmented B2B SaaS data into a governed, executive-ready KPI system.**
@@ -77,7 +78,8 @@ Instead of reviewing disconnected operational reports, leadership will be able t
 
 The system follows a standard analytics engineering pipeline: business questions drive the source data model, which is transformed through staging and validation into a dimensional warehouse, exposed through a governed KPI layer, and surfaced to leadership through an executive dashboard.
 
-![Architecture Flow](./architecture/architecture_flow.png)
+<img width="3380" height="1679" alt="architecture_flow" src="https://github.com/user-attachments/assets/04e8ba26-f909-4d78-b0c8-a17d9a355e78" />
+
 
 ```
 Business Questions → Source Systems → Raw Data → Python → SQL/DuckDB →
@@ -101,7 +103,8 @@ Dimensional Model → KPI Layer → Dashboard → Insights
 
 The model uses shared dimensions surrounding multiple business-process fact tables. `dim_customer` is the central business entity; `dim_date` supports time-based analysis across every fact.
 
-![Star Schema](./architecture/star_schema.png)
+<img width="4739" height="863" alt="star_schema" src="https://github.com/user-attachments/assets/87fc0580-9f3f-4ca1-8f67-9ddfae90486f" />
+
 
 > **Note on `fact_marketing_campaign`:** the fact table currently shares a name with `dim_marketing_campaign`. This is being revisited against the documented grain in the field dictionary — it may be renamed to something like `fact_marketing_performance` or `fact_campaign_activity` to avoid confusion between the dimension (campaign attributes) and the fact (campaign performance measures). No change has been made yet pending that review.
 
