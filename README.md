@@ -15,9 +15,9 @@
 | Field | Detail |
 |---|---|
 | **Project type** | Portfolio capstone — analytics engineering, SQL, Python, data modeling, KPI design, executive reporting |
-| **Business scenario** | Northstar Analytics (fictional B2B SaaS company) needs one trusted view of revenue, customers, sales, product usage, marketing, support, and customer success |
+| **Business scenario** | Northstar Analytics (fictional B2B SaaS company) needs one trusted view of revenue, customers, sales, product usage, and customer success (including support) |
 | **Core tools** | GitHub · VS Code · Python (pandas, NumPy) · DuckDB/SQL · Draw.io · Power BI / Tableau |
-| **Current status** | Phase 1 & 2 complete · Phase 3 in progress — reference, customer, subscription, and revenue-transaction datasets generated and validated (128,977 revenue transaction records) |
+| **Current status** | Phases 1–2 complete · Phase 3 data generated (11 datasets, incl. 106,112 revenue transactions) with 3 realism fixes open · monthly revenue, subscription, and customer-success summaries built and reconciled |
 | **Portfolio goal** | Demonstrate the full path from business requirements → architecture → modeled data → KPI logic → dashboards → validation → executive insight |
 
 ---
@@ -27,11 +27,11 @@
 | Capability | What I Built |
 |---|---|
 | Business Analysis | Translated executive questions into measurable KPIs |
-| Data Architecture | Designed a multi-source analytics architecture across 6 operational domains |
+| Data Architecture | Designed a multi-source analytics architecture across 4 operational domains (CRM, billing, product, customer success) |
 | Data Modeling | Built a dimensional model spanning 7 business processes |
 | Python | Generated reproducible, seeded synthetic business data |
 | SQL / DuckDB | *Planned* — warehouse transformations and KPI logic |
-| Data Quality | Implemented validation and business-rule checks on generated data |
+| Data Quality | Implemented validation and business-rule checks on generated data, plus a cross-layer reconciliation that caught and fixed a billing logic error |
 | BI | *Planned* — executive decision-support dashboard |
 | Communication | Documenting architecture, findings, and business recommendations as the build progresses |
 
@@ -39,12 +39,11 @@
 
 ## 🎯 The Business Problem
 
-Northstar Analytics has customer, subscription, sales, product, marketing, support, and customer-success data spread across separate operational systems. Leadership can't answer basic questions from a single trusted source:
+Northstar Analytics has customer, subscription, sales, product, and customer-success data spread across separate operational systems. Leadership can't answer basic questions from a single trusted source:
 
 - How much recurring revenue do we have, and how is it trending?
 - Which customers are at risk of churn?
 - Which sales opportunities are likely to close?
-- Which marketing campaigns actually generate pipeline?
 - Is product usage strong enough to support renewal?
 
 This project builds a small analytics platform that unifies those domains into one governed source of truth — preserving data lineage and validation logic behind every KPI, rather than relying on scattered dashboard-level calculations.
@@ -53,7 +52,7 @@ This project builds a small analytics platform that unifies those domains into o
 
 ## 🏆 Business Outcome
 
-The completed command center will give Northstar leadership a single analytical view across the full customer lifecycle — from marketing acquisition and sales pipeline, through subscription revenue, product engagement, support, renewal risk, and churn.
+The completed command center will give Northstar leadership a single analytical view across the full customer lifecycle — from sales pipeline through subscription revenue, product engagement, support load, renewal risk, and churn.
 
 Instead of reviewing disconnected operational reports, leadership will be able to identify where revenue is growing, which customers require intervention, where pipeline is stalling, and which business activities are contributing to recurring revenue.
 
@@ -93,9 +92,7 @@ Dimensional Model → KPI Layer → Dashboard → Insights
 | CRM | Salesforce-style CRM | Accounts, opportunities, stages, sales ownership |
 | Billing / Subscriptions | Stripe-style billing platform | Plans, subscriptions, recurring revenue, transactions |
 | Product Analytics | Application event tracking | Feature usage and engagement |
-| Marketing | Campaign / automation platform | Campaigns, spend, leads, influenced pipeline |
-| Customer Success | CS platform | CSM ownership, health, renewal risk, account snapshots |
-| Support | Ticketing platform | Tickets, priority, resolution time, customer issues |
+| Customer Success | CS platform | CSM ownership, health, satisfaction, renewal risk, monthly support-ticket volume |
 
 ---
 
@@ -106,14 +103,14 @@ The model uses shared dimensions surrounding multiple business-process fact tabl
 <img width="4739" height="863" alt="star_schema" src="https://github.com/user-attachments/assets/87fc0580-9f3f-4ca1-8f67-9ddfae90486f" />
 
 
-> **Note on `fact_marketing_campaign`:** the fact table currently shares a name with `dim_marketing_campaign`. This is being revisited against the documented grain in the field dictionary — it may be renamed to something like `fact_marketing_performance` or `fact_campaign_activity` to avoid confusion between the dimension (campaign attributes) and the fact (campaign performance measures). No change has been made yet pending that review.
+> **Scope note (v1):** marketing is out of scope for this version, and support is tracked as monthly ticket volume within customer success rather than as a separate ticket-level fact. The diagram above still shows `fact_marketing_campaign` and `dim_marketing_campaign`; they will be removed in the next diagram update.
 
 ### Key Concepts
 
 | Concept | Definition |
 |---|---|
-| **Fact table** | Represents a measurable business process at a defined grain (e.g., subscriptions, revenue transactions, product usage, sales opportunities, marketing activity, support tickets, CS snapshots) |
-| **Dimension table** | Descriptive context used to filter and group facts (e.g., customer, date, plan, sales rep, sales stage, CSM, product feature, campaign) |
+| **Fact table** | Represents a measurable business process at a defined grain (e.g., subscriptions, revenue transactions, product usage, sales opportunities, customer success activity) |
+| **Dimension table** | Descriptive context used to filter and group facts (e.g., customer, date, plan, sales rep, sales stage, CSM, product feature) |
 | **Grain** | What one row in a fact table represents — must be defined before building keys, measures, or validation rules |
 | **Star schema** | Fact tables surrounded by reusable, shared dimensions — simplifies analytical SQL and BI relationships |
 | **Raw vs. Processed layers** | Raw preserves source-like data; processed holds cleaned/transformed outputs — separating them keeps the pipeline auditable and reproducible |
@@ -125,8 +122,8 @@ The model uses shared dimensions surrounding multiple business-process fact tabl
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/executive-kpi-command-center.git
-cd executive-kpi-command-center
+git clone https://github.com/shirleylandondata/Executive-KPI-Command-Center.git
+cd Executive-KPI-Command-Center
 
 # 2. Install dependencies
 pip install -r requirements.txt
@@ -134,9 +131,14 @@ pip install -r requirements.txt
 # 3. Generate the synthetic raw datasets (seeded — fully reproducible)
 python python/generate_data.py
 
-# 4. Inspect output
-ls data/raw/
+# 4. Build the processed monthly summaries
+python python/process_data.py
+
+# 5. Inspect output
+ls data/raw/ data/processed/
 ```
+
+Raw CSVs are **not committed** (the largest is ~43 MB). They are regenerated from the seeded script. The small processed summaries in `data/processed/` are committed so results can be reviewed without running anything.
 
 `requirements.txt` tracks: `pandas`, `numpy`, `duckdb`. The generator uses `SEED = 42` so anyone who clones the repo can reproduce identical datasets.
 
@@ -146,8 +148,8 @@ ls data/raw/
 
 | Validation Category | Example Check |
 |---|---|
-| Uniqueness | No duplicate `opportunity_id`, `account_id`, `subscription_id`, `ticket_id`, or transaction ID where the grain requires uniqueness |
-| Referential integrity | Every `customer_key`, `plan_key`, `stage_key`, `rep_key`, `feature_key`, `campaign_key`, and `date_key` resolves to a valid dimension row |
+| Uniqueness | No duplicate `opportunity_id`, `account_id`, `subscription_id`, `usage_id`, `cs_activity_id`, or `transaction_id` where the grain requires uniqueness |
+| Referential integrity | Every `customer_key`, `plan_key`, `sales_stage_key`, `sales_rep_key`, `product_feature_key`, `customer_success_manager_key`, and date key resolves to a valid dimension row |
 | Date logic | End/close/renewal dates never precede creation/start dates |
 | Status logic | Won/lost/open flags agree with sales stage and actual close date |
 | Financial logic | Revenue and recurring-price fields are non-negative and consistent with subscription state |
@@ -169,18 +171,44 @@ ls data/raw/
 
 | Check | Result |
 |---|---|
-| Every subscription resolves to a valid `customer_id` and `plan_id` | ✅ Passed |
+| Every subscription resolves to a valid `account_id` and `plan_id` | ✅ Passed |
 | Subscription status agrees with lifecycle/renewal fields | ✅ Passed |
 
-`revenue_transactions.csv` (128,977 rows)
+`revenue_transactions.csv` (106,112 rows)
 
 | Check | Result |
 |---|---|
 | Every transaction resolves to a valid customer/subscription | ✅ Passed |
 | Revenue amounts are non-negative | ✅ Passed |
-| Transaction dates fall within valid subscription date ranges | ✅ Passed |
+| Transaction dates fall within valid subscription date ranges | ✅ Passed (0 before start, 0 after cancellation) |
+| No duplicate transaction IDs | ✅ Passed |
 
-*Remaining raw datasets (`product_usage.csv`, `sales_opportunities.csv`, `marketing_campaigns.csv`, `support_tickets.csv`, `customer_success_snapshots.csv`) are still to be generated and validated — see [Roadmap](#️-project-roadmap).*
+**Cross-layer reconciliation** (`revenue_monthly.csv` vs. `subscription_monthly.csv`)
+
+| Check | Result |
+|---|---|
+| Subscriptions billed each month = active subscriptions that month | ✅ Passed — 0 difference in all 31 months (Jan 2024 – Jul 2026) |
+| Billed revenue vs. MRR | ✅ Explained — billed runs ~1.5% above MRR because upgrades bill at +25% and add-ons at +10% of the base plan price |
+
+**Generated datasets**
+
+| Dataset | Rows | Type |
+|---|---|---|
+| `customers.csv` | 5,000 | Core |
+| `subscriptions.csv` | 4,496 | Core |
+| `revenue_transactions.csv` | 106,112 | Core |
+| `product_usage.csv` | 567,831 | Core |
+| `opportunities.csv` | 5,000 | Core |
+| `customer_success_activity.csv` | 120,750 | Core |
+| `subscription_plans.csv`, `sales_representatives.csv`, `sales_stages.csv`, `customer_success_managers.csv`, `product_features.csv` | 4–8 each | Reference |
+
+**Open data-realism issues** (Phase 3 is not marked complete until these are fixed)
+
+| Issue | Why it matters |
+|---|---|
+| No new subscriptions start after Jan 20, 2026 | The last six months would show zero new business |
+| 105 subscriptions have cancellation dates after the reporting period ends (some in 2028) | Future-dated events should not exist in historical data |
+| Customer-success activity counts all 4,496 subscriptions in Jul 2026, while only 3,822 are active | Health and risk metrics would include customers who have already left |
 
 ---
 
@@ -192,9 +220,7 @@ ls data/raw/
 | **Customers** | Active / new / churned customers · customer mix · churn rate |
 | **Sales** | Open pipeline · weighted pipeline · win rate · avg. deal size · pipeline by stage · sales cycle |
 | **Product** | Active users/accounts · feature adoption · usage frequency · engagement by segment |
-| **Marketing** | Campaign spend · leads/opportunities influenced · pipeline influenced · cost efficiency |
-| **Support** | Open tickets · tickets by priority · avg. resolution time · repeat-issue customers |
-| **Customer Success** | Health/risk distribution · upcoming renewals · at-risk revenue · CSM portfolio |
+| **Customer Success** | Health/risk distribution · satisfaction · support-ticket volume · upcoming renewals · at-risk revenue · CSM portfolio |
 
 > **Design rule:** every KPI will have a business definition, SQL logic, grain, date context, and a clear owner. No metric will be built in the dashboard that doesn't already exist in the documented KPI layer. *(Status: KPI layer not yet built — Phase 6, Planned.)*
 
@@ -208,7 +234,7 @@ ls data/raw/
 >
 > - Enterprise accounts represent X% of ARR but Y% of at-risk recurring revenue.
 > - Product adoption falls materially in the 90 days preceding churn.
-> - Customers with high-priority support volume show a higher concentration of renewal risk.
+> - Customers with high support-ticket volume show a higher concentration of renewal risk.
 > - **Recommendation:** prioritize CSM outreach to accounts meeting all three risk conditions.
 
 ---
@@ -235,12 +261,13 @@ executive-kpi-command-center/
 ├── architecture/        # ERD, system-flow diagrams
 ├── dashboard/           # BI files, screenshots
 ├── data/
-│   ├── raw/             # Source-like generated CSVs
+│   ├── raw/             # Source-like generated CSVs (not committed — regenerate locally)
 │   └── processed/       # Cleaned / modeled warehouse outputs
 ├── docs/                # Dataset inventory, field dictionary, KPI definitions
 ├── loom/                # Walkthrough recordings
 ├── python/
-│   └── generate_data.py # Synthetic data generator (seeded, reproducible)
+│   ├── generate_data.py # Synthetic data generator (seeded, reproducible)
+│   └── process_data.py  # Monthly revenue, subscription, and CS summaries
 ├── sql/                 # Staging, dimensional model, KPI SQL
 ├── .gitignore
 ├── README.md
@@ -252,13 +279,14 @@ executive-kpi-command-center/
 ## ▶️ Reproduction Instructions
 
 ```bash
-git clone https://github.com/<your-username>/executive-kpi-command-center.git
-cd executive-kpi-command-center
+git clone https://github.com/shirleylandondata/Executive-KPI-Command-Center.git
+cd Executive-KPI-Command-Center
 pip install -r requirements.txt
 python python/generate_data.py
+python python/process_data.py
 ```
 
-All generated data is reproducible via a fixed random seed (`SEED = 42`), so anyone who clones the repository will get identical raw datasets.
+All generated data is reproducible via a fixed random seed (`SEED = 42`). Running the generator on two different machines (Windows and Linux) produced row-for-row identical datasets.
 
 ---
 
@@ -268,8 +296,8 @@ All generated data is reproducible via a fixed random seed (`SEED = 42`), so any
 |---|---|---|---|
 | 1. Project Foundation | Define the business case and organize the repository | Project folders, README foundation, business questions, GitHub repo | ✅ Complete |
 | 2. Data Architecture & Modeling | Design how data should be organized before coding transformations | Source systems, dataset inventory, star schema, ERD, field dictionary, validation rules | ✅ Complete |
-| 3. Synthetic Data Generation | Create realistic raw source datasets in Python | `generate_data.py` + raw CSV files | 🟡 In Progress — customers, subscriptions, revenue transactions done; product usage, sales opportunities, marketing, support, and CS snapshots remaining |
-| 4. Warehouse Build | Load, clean, standardize, and model data with SQL/DuckDB | Dimension and fact tables in processed/warehouse layer | ⬜ Planned |
+| 3. Synthetic Data Generation | Create realistic raw source datasets in Python | `generate_data.py` + raw CSV files | 🟡 In Progress — all 11 datasets generated and validated; 3 realism fixes open (see Data Quality) |
+| 4. Warehouse Build | Load, clean, standardize, and model data with SQL/DuckDB | Dimension and fact tables in processed/warehouse layer | 🟡 Started — monthly revenue, subscription, and CS summaries built in pandas (`process_data.py`); DuckDB star schema planned |
 | 5. Data Quality & Validation | Prove the model is reliable | Automated checks and validation queries | ⬜ Planned |
 | 6. KPI / Semantic Layer | Create reusable business metrics | Executive KPI SQL views or tables | ⬜ Planned |
 | 7. Executive Dashboard | Turn modeled data into decision-ready reporting | Command-center dashboard with executive and functional views | ⬜ Planned |
@@ -284,13 +312,15 @@ All generated data is reproducible via a fixed random seed (`SEED = 42`), so any
 - [x] `dataset_inventory.md` created
 - [x] Star schema designed
 - [x] Field dictionary and validation rules documented
-- [ ] ERD relationship lines finished and exported (including `fact_marketing_campaign` naming review)
+- [ ] ERD relationship lines finished and exported (marketing tables removed for v1 scope)
 - [x] Python environment and `requirements.txt` prepared
 - [x] Reference CSVs generated
 - [x] `customers.csv` generated and validated
 - [x] `subscriptions.csv` generated and validated
-- [x] `revenue_transactions.csv` generated and validated (128,977 rows)
-- [ ] Remaining raw fact/process datasets generated (`product_usage`, `sales_opportunities`, `marketing_campaigns`, `support_tickets`, `customer_success_snapshots`)
+- [x] `revenue_transactions.csv` generated and validated (106,112 rows)
+- [x] `product_usage`, `opportunities`, and `customer_success_activity` generated
+- [x] Monthly processed summaries built and reconciled (revenue vs. subscriptions, 0 difference in 31 months)
+- [ ] Data-realism fixes: new subscriptions through Jul 2026, no future cancellation dates, CS activity limited to active customers
 - [ ] DuckDB staging and warehouse model built
 - [ ] Automated data-quality checks completed
 - [ ] KPI layer completed and documented
@@ -302,13 +332,20 @@ All generated data is reproducible via a fixed random seed (`SEED = 42`), so any
 
 ## 📚 Lessons Learned
 
-*This section will capture engineering and modeling decisions worth calling out to a hiring manager (e.g., grain trade-offs, validation edge cases, modeling naming conventions) as the build progresses.*
+**1. Row-level checks passed, but the numbers were still wrong.**
+Every revenue transaction passed its individual checks: valid IDs, non-negative amounts, dates in range. Comparing the monthly revenue summary against the monthly subscription summary told a different story. Revenue billed a flat ~4,160 subscriptions every month for 31 months while active subscriptions grew from 2,677 to 3,822. The generator was billing subscriptions that had not started yet and dropping upgrade and add-on pricing. *Takeaway: validate across layers, not just within a table.*
+
+**2. Two definitions of "active" created a smaller, hidden gap.**
+After the first fix, billed subscriptions still ran 33–73 below active subscriptions each month. The gap exactly matched the number of subscriptions that started mid-month: the subscription summary counted them active in their start month, while billing waited for the next 1st. I chose to bill in the start month (first invoice dated on the start date, never before it), and the two layers now reconcile to zero in every month. *Takeaway: write the business rule down before building the metric, because "active" can mean more than one thing.*
+
+**3. Scope cut to finish.**
+Marketing was removed from v1, and support is tracked inside customer success, so the project reaches a working dashboard sooner. Both are documented as scope decisions rather than left as silent gaps.
 
 ---
 
 ## 🎤 Interview / Portfolio Summary
 
-> *I built an end-to-end executive KPI command center for a fictional B2B SaaS company. I started by defining the business questions and source systems, designed a dimensional model and data dictionary, generated reproducible source data in Python, and am now transforming and validating it in SQL/DuckDB before building an executive reporting layer across revenue, customers, sales, product, marketing, support, and customer success.*
+> *I built an end-to-end executive KPI command center for a fictional B2B SaaS company. I started by defining the business questions and source systems, designed a dimensional model and data dictionary, generated reproducible source data in Python, and am now transforming and validating it in SQL/DuckDB before building an executive reporting layer across revenue, customers, sales, product, and customer success.*
 
 This project is presented as an **executive decision-support system**, not simply a dashboard — the technical story spans architecture design, multi-domain data modeling, reproducible data generation, validated analytics, governed KPI definitions, and executive-level insight delivery.
 
