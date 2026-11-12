@@ -3,7 +3,8 @@
 
 **An end-to-end analytics engineering build that turns fragmented B2B SaaS data into a governed, executive-ready KPI system.**
 
-[![Status](https://img.shields.io/badge/status-in%20progress-yellow)]()
+[![Release](https://img.shields.io/badge/release-v1.0%20data%20foundation-green)](https://github.com/shirleylandondata/Executive-KPI-Command-Center/releases/tag/v1.0)
+[![Status](https://img.shields.io/badge/v2-in%20progress-yellow)]()
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![SQL](https://img.shields.io/badge/warehouse-DuckDB%2FSQL-orange)]()
 [![BI](https://img.shields.io/badge/dashboard-Power%20BI%20%2F%20Tableau-purple)]()
@@ -17,8 +18,32 @@
 | **Project type** | Portfolio capstone — analytics engineering, SQL, Python, data modeling, KPI design, executive reporting |
 | **Business scenario** | Northstar Analytics (fictional B2B SaaS company) needs one trusted view of revenue, customers, sales, product usage, and customer success (including support) |
 | **Core tools** | GitHub · VS Code · Python (pandas, NumPy) · DuckDB/SQL · Draw.io · Power BI / Tableau |
-| **Current status** | Phases 1–2 complete · Phase 3 data generated (11 datasets, incl. 106,112 revenue transactions) with 3 realism fixes open · monthly revenue, subscription, and customer-success summaries built and reconciled |
+| **Current status** | **v1.0 released (data foundation):** discovery, star schema, reproducible data pipeline, reconciled monthly KPI outputs, 29 documented data quality rules · **V2 in progress:** SQL KPI layer, dashboard, executive findings |
 | **Portfolio goal** | Demonstrate the full path from business requirements → architecture → modeled data → KPI logic → dashboards → validation → executive insight |
+
+---
+
+## 📊 KPI Snapshot (v1.0)
+
+Headline KPIs calculated from the v1 processed outputs in `data/processed/`. The reporting period is Jan 2024 – Jul 2026 (31 months), and all data is synthetic.
+
+| KPI | Jan 2024 | Jul 2026 | Change |
+|---|---|---|---|
+| **Monthly Recurring Revenue (MRR)** | $3.46M | $5.01M | ▲ 44.6% |
+| **Annual Recurring Revenue (ARR)** | $41.6M | $60.1M | ▲ 44.6% |
+| **Active Subscriptions** | 2,677 | 3,822 | ▲ 42.8% |
+| **Monthly Churn Rate** | — | 0.31% | 0.33% average across the period |
+| **Collection Rate** | 93.96% | 95.39% | 95.0% average across the period |
+
+| Annual View | 2024 | 2025 | Change |
+|---|---|---|---|
+| **Billed Revenue** | $47.1M | $57.3M | ▲ 21.6% |
+
+**How to read these numbers**
+
+- **Every KPI ties back to source data.** Monthly transactions match active subscriptions in all 31 months, and raw-to-monthly revenue totals reconcile to the cent.
+- **The 2026 decline is a data gap, not a business finding.** MRR peaks at $5.09M in Jan 2026 and then drifts down. That's because the generator creates no new subscriptions after Jan 20, 2026, so the decline is a known open issue and not a churn story (rule DT-05 in [`data_quality_rules.md`](docs/data_quality_rules.md)).
+- **Customer health KPIs are held back from this table.** The customer success output still counts customers without an active subscription (4,496 vs. 3,822 in Jul 2026), so health and at-risk rates would be overstated until that's fixed (rule ST-02).
 
 ---
 
@@ -212,17 +237,38 @@ Raw CSVs are **not committed** (the largest is ~43 MB). They are regenerated fro
 
 ---
 
-## 📈 KPI Definitions
+## 📈 KPI Framework
 
-| KPI Group | Candidate Metrics |
+Every KPI has a business definition, calculation, owner, reporting frequency and the decision it supports, documented in [`kpi_dictionary.md`](docs/kpi_dictionary.md). [`kpi_data_mapping.md`](docs/kpi_data_mapping.md) traces each one to its source table, fields and output column.
+
+> **Design rule:** no metric goes on the dashboard unless it's defined in the KPI dictionary, mapped to source data and calculated in the KPI layer.
+
+### KPI Readiness
+
+| KPI | Business Owner | Decision Supported | Status |
+|---|---|---|---|
+| **MRR** | CFO | Short-term revenue forecasting | ✅ Calculated (`subscription_monthly.csv`) |
+| **ARR** | CFO | Is recurring revenue growing fast enough to hit targets? | ✅ Calculated (`subscription_monthly.csv`) |
+| **Customer Churn Rate** | VP Customer Success | Are we keeping customers? | ✅ Calculated (`subscription_monthly.csv`) |
+| **Collection Rate** | CFO | Are we collecting what we bill? | ✅ Calculated (`revenue_monthly.csv`) |
+| **Win Rate** | CRO | How effective is the sales team? | 🟡 Source data ready; built in the V2 SQL layer |
+| **Pipeline Coverage** | CRO | Is there enough pipeline to hit target? | 🟡 Source data ready; target source to confirm |
+| **Customer Health Score** | VP Customer Success | Which accounts need outreach? | 🟡 Needs active-customer filter and composite scoring |
+| **Product Adoption Rate** | VP Product | Are customers getting value from the product? | 🔴 Adoption threshold not yet defined |
+| **Net Revenue Retention** | CFO / VP Customer Success | Is the existing customer base growing? | 🔴 Needs expansion and contraction MRR history |
+| **Gross Revenue Retention** | VP Customer Success | How much revenue do we keep before expansion? | 🔴 Needs contraction MRR history |
+
+**4 KPIs calculated · 3 ready to build · 3 blocked by data or definition gaps.** Naming the blocked KPIs up front avoids a common reporting failure: a dashboard tile that shows a number the data can't support.
+
+### KPI Groups Planned for the Dashboard
+
+| KPI Group | Metrics |
 |---|---|
 | **Revenue** | MRR · ARR · revenue growth · recurring revenue by segment · expansion/contraction |
 | **Customers** | Active / new / churned customers · customer mix · churn rate |
 | **Sales** | Open pipeline · weighted pipeline · win rate · avg. deal size · pipeline by stage · sales cycle |
 | **Product** | Active users/accounts · feature adoption · usage frequency · engagement by segment |
 | **Customer Success** | Health/risk distribution · satisfaction · support-ticket volume · upcoming renewals · at-risk revenue · CSM portfolio |
-
-> **Design rule:** every KPI will have a business definition, SQL logic, grain, date context, and a clear owner. No metric will be built in the dashboard that doesn't already exist in the documented KPI layer. *(Status: KPI layer not yet built — Phase 6, Planned.)*
 
 ---
 
